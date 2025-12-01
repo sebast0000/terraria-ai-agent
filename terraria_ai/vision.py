@@ -59,6 +59,10 @@ class Vision:
                 'lower': np.array([80, 100, 100]),
                 'upper': np.array([100, 255, 255])
             },
+            'skeleton': {
+                'lower': np.array([100, 80, 80]),   # Blue shirt color
+                'upper': np.array([130, 255, 200])
+            },
             'eye_of_cthulhu': {
                 'lower': np.array([0, 100, 150]),
                 'upper': np.array([10, 255, 255])
@@ -222,6 +226,32 @@ class Vision:
                         name='blue_slime',
                         x=x, y=y, width=w, height=h,
                         confidence=min(area / 2500, 1.0),
+                        category='enemy'
+                    ))
+
+        # Detect skeletons (blue shirt, tall humanoid shape)
+        skeleton_mask = cv2.inRange(hsv,
+                                    self.color_ranges['skeleton']['lower'],
+                                    self.color_ranges['skeleton']['upper'])
+        skeleton_contours, _ = cv2.findContours(skeleton_mask, cv2.RETR_EXTERNAL,
+                                                 cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in skeleton_contours:
+            area = cv2.contourArea(contour)
+            if 300 < area < 8000:  # Skeletons are medium-sized
+                x, y, w, h = cv2.boundingRect(contour)
+                aspect_ratio = h / w if w > 0 else 0
+
+                # Skeletons are taller than wide (humanoid shape)
+                if 1.2 < aspect_ratio < 4.0:
+                    # Skip very large areas (background)
+                    if w > 120 or h > 200:
+                        continue
+
+                    enemies.append(DetectedObject(
+                        name='skeleton',
+                        x=x, y=y, width=w, height=h,
+                        confidence=min(area / 4000, 1.0),
                         category='enemy'
                     ))
 

@@ -67,6 +67,15 @@ class EntityDetector:
                 aspect_ratio_range=(0.8, 1.5),
                 category='enemy'
             ),
+            'skeleton': EntityProfile(
+                name='skeleton',
+                color_lower=np.array([100, 80, 80]),   # Blue shirt color
+                color_upper=np.array([130, 255, 200]),
+                min_area=300,
+                max_area=8000,
+                aspect_ratio_range=(1.2, 4.0),  # Tall humanoid shape
+                category='enemy'
+            ),
             'guide_npc': EntityProfile(
                 name='guide',
                 color_lower=np.array([15, 50, 100]),
