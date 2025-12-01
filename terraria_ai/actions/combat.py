@@ -81,7 +81,7 @@ class CombatController:
         self.magic_slot = 7
 
         # Combat stats
-        self.kills = {'zombie': 0, 'eye_of_cthulhu': 0, 'green_slime': 0, 'blue_slime': 0, 'other': 0}
+        self.kills = {'zombie': 0, 'eye_of_cthulhu': 0, 'blue_slime': 0, 'other': 0}
         self.damage_taken = 0
 
     def engage_combat(self) -> bool:
@@ -132,10 +132,6 @@ class CombatController:
                 enemy_type = EnemyType.ZOMBIE
                 threat = 2
                 priority = 3
-            elif enemy.name == 'green_slime':
-                enemy_type = EnemyType.SLIME
-                threat = 1  # Low threat
-                priority = 4  # Lower priority than zombies
             elif enemy.name == 'blue_slime':
                 enemy_type = EnemyType.SLIME
                 threat = 1

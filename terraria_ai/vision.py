@@ -55,10 +55,6 @@ class Vision:
                 'lower': np.array([0, 20, 40]),
                 'upper': np.array([20, 100, 120])
             },
-            'green_slime': {
-                'lower': np.array([55, 180, 150]),  # Very bright lime green only (not grass/leaves)
-                'upper': np.array([70, 255, 255])   # Narrow hue range, high saturation required
-            },
             'blue_slime': {
                 'lower': np.array([80, 100, 100]),
                 'upper': np.array([100, 255, 255])
@@ -204,38 +200,6 @@ class Vision:
                         name='eye_of_cthulhu',
                         x=x, y=y, width=w, height=h,
                         confidence=min(circularity, 1.0),
-                        category='enemy'
-                    ))
-
-        # Detect green slimes (bright green blob shapes)
-        # NOTE: We filter out trees (tall shapes) and torches (small bright spots)
-        green_slime_mask = cv2.inRange(hsv,
-                                       self.color_ranges['green_slime']['lower'],
-                                       self.color_ranges['green_slime']['upper'])
-        green_slime_contours, _ = cv2.findContours(green_slime_mask, cv2.RETR_EXTERNAL,
-                                                    cv2.CHAIN_APPROX_SIMPLE)
-
-        for contour in green_slime_contours:
-            area = cv2.contourArea(contour)
-            if 300 < area < 4000:  # Green slimes are small-medium
-                x, y, w, h = cv2.boundingRect(contour)
-                aspect_ratio = h / w if w > 0 else 0
-
-                # Calculate circularity - slimes are blob-shaped (round-ish)
-                perimeter = cv2.arcLength(contour, True)
-                circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
-
-                # Slimes are blob-shaped (not tall like trees or flat like grass)
-                # Circularity > 0.4 filters out irregular leaf/grass shapes
-                if 0.5 < aspect_ratio < 1.8 and circularity > 0.4:
-                    # Skip very large areas (likely trees or background)
-                    if w > 100 or h > 100:
-                        continue
-
-                    enemies.append(DetectedObject(
-                        name='green_slime',
-                        x=x, y=y, width=w, height=h,
-                        confidence=min(area / 2000, 1.0),
                         category='enemy'
                     ))
 
