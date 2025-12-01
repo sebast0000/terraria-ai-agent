@@ -69,11 +69,11 @@ class EntityDetector:
             ),
             'green_slime': EntityProfile(
                 name='green_slime',
-                color_lower=np.array([45, 150, 100]),  # Bright lime green (not dark tree green)
-                color_upper=np.array([75, 255, 255]),
-                min_area=300,
-                max_area=3500,  # Not too big (trees are huge)
-                aspect_ratio_range=(0.5, 1.5),  # Blob-shaped, not tall like trees
+                color_lower=np.array([40, 100, 80]),  # Bright green (not dark tree green)
+                color_upper=np.array([80, 255, 255]),
+                min_area=200,
+                max_area=5000,
+                aspect_ratio_range=(0.4, 2.0),  # Blob-shaped
                 category='enemy'
             ),
             'guide_npc': EntityProfile(
