@@ -55,6 +55,14 @@ class Vision:
                 'lower': np.array([0, 20, 40]),
                 'upper': np.array([20, 100, 120])
             },
+            'green_slime': {
+                'lower': np.array([35, 80, 80]),
+                'upper': np.array([75, 255, 255])
+            },
+            'blue_slime': {
+                'lower': np.array([80, 100, 100]),
+                'upper': np.array([100, 255, 255])
+            },
             'eye_of_cthulhu': {
                 'lower': np.array([0, 100, 150]),
                 'upper': np.array([10, 255, 255])
@@ -196,6 +204,50 @@ class Vision:
                         name='eye_of_cthulhu',
                         x=x, y=y, width=w, height=h,
                         confidence=min(circularity, 1.0),
+                        category='enemy'
+                    ))
+
+        # Detect green slimes (bright green blob shapes)
+        green_slime_mask = cv2.inRange(hsv,
+                                       self.color_ranges['green_slime']['lower'],
+                                       self.color_ranges['green_slime']['upper'])
+        green_slime_contours, _ = cv2.findContours(green_slime_mask, cv2.RETR_EXTERNAL,
+                                                    cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in green_slime_contours:
+            area = cv2.contourArea(contour)
+            if 200 < area < 4000:  # Green slimes are small-medium
+                x, y, w, h = cv2.boundingRect(contour)
+                aspect_ratio = h / w if w > 0 else 0
+
+                # Slimes are roughly blob-shaped (not too tall or wide)
+                if 0.5 < aspect_ratio < 1.8:
+                    enemies.append(DetectedObject(
+                        name='green_slime',
+                        x=x, y=y, width=w, height=h,
+                        confidence=min(area / 2000, 1.0),
+                        category='enemy'
+                    ))
+
+        # Detect blue slimes (cyan/blue blob shapes)
+        blue_slime_mask = cv2.inRange(hsv,
+                                      self.color_ranges['blue_slime']['lower'],
+                                      self.color_ranges['blue_slime']['upper'])
+        blue_slime_contours, _ = cv2.findContours(blue_slime_mask, cv2.RETR_EXTERNAL,
+                                                   cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in blue_slime_contours:
+            area = cv2.contourArea(contour)
+            if 200 < area < 5000:  # Blue slimes can be slightly bigger
+                x, y, w, h = cv2.boundingRect(contour)
+                aspect_ratio = h / w if w > 0 else 0
+
+                # Slimes are roughly blob-shaped
+                if 0.5 < aspect_ratio < 1.8:
+                    enemies.append(DetectedObject(
+                        name='blue_slime',
+                        x=x, y=y, width=w, height=h,
+                        confidence=min(area / 2500, 1.0),
                         category='enemy'
                     ))
 

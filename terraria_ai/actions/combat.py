@@ -81,7 +81,7 @@ class CombatController:
         self.magic_slot = 7
 
         # Combat stats
-        self.kills = {'zombie': 0, 'eye_of_cthulhu': 0, 'other': 0}
+        self.kills = {'zombie': 0, 'eye_of_cthulhu': 0, 'green_slime': 0, 'blue_slime': 0, 'other': 0}
         self.damage_taken = 0
 
     def engage_combat(self) -> bool:
@@ -132,6 +132,14 @@ class CombatController:
                 enemy_type = EnemyType.ZOMBIE
                 threat = 2
                 priority = 3
+            elif enemy.name == 'green_slime':
+                enemy_type = EnemyType.SLIME
+                threat = 1  # Low threat
+                priority = 4  # Lower priority than zombies
+            elif enemy.name == 'blue_slime':
+                enemy_type = EnemyType.SLIME
+                threat = 1
+                priority = 4
             elif enemy.name == 'eye_of_cthulhu':
                 enemy_type = EnemyType.EYE_OF_CTHULHU
                 threat = 10
@@ -177,6 +185,8 @@ class CombatController:
             return self._fight_eye_of_cthulhu(target)
         elif target.enemy_type == EnemyType.ZOMBIE:
             return self._fight_zombie(target)
+        elif target.enemy_type == EnemyType.SLIME:
+            return self._fight_slime(target)
         else:
             return self._fight_generic(target)
 
@@ -222,6 +232,46 @@ class CombatController:
             self.movement.jump(0.1)
             self.input.attack(enemy_x, enemy_y, duration=0.1)
             self.last_attack_time = time.time()
+
+            return True
+
+    def _fight_slime(self, target: CombatTarget) -> bool:
+        """
+        Fight a slime (green or blue).
+
+        Slimes are simple enemies that hop toward the player.
+        Easy to kill with any weapon, just hit them!
+
+        Args:
+            target: Slime target
+
+        Returns:
+            True if attack executed
+        """
+        enemy = target.enemy
+        enemy_x, enemy_y = enemy.center
+        player_x, player_y = self.state.player.position
+
+        # Select melee weapon (slimes are easy, melee is fine)
+        self.inventory.select_slot(self.melee_slot)
+        time.sleep(0.02)
+
+        if target.distance < 200:
+            # Close enough to attack
+            self.input.attack(enemy_x, enemy_y, duration=0.1)
+            self.last_attack_time = time.time()
+
+            # Jump on top of slimes to avoid damage
+            if target.distance < 80:
+                self.movement.jump(0.1)
+
+            return True
+        else:
+            # Move toward slime
+            if enemy_x > player_x:
+                self.movement.move_right(0.15)
+            else:
+                self.movement.move_left(0.15)
 
             return True
 

@@ -58,13 +58,22 @@ class EntityDetector:
                 aspect_ratio_range=(0.5, 2.0),
                 category='boss'
             ),
-            'slime': EntityProfile(
-                name='slime',
+            'blue_slime': EntityProfile(
+                name='blue_slime',
                 color_lower=np.array([80, 100, 100]),
                 color_upper=np.array([100, 255, 255]),
                 min_area=300,
                 max_area=5000,
                 aspect_ratio_range=(0.8, 1.5),
+                category='enemy'
+            ),
+            'green_slime': EntityProfile(
+                name='green_slime',
+                color_lower=np.array([35, 80, 80]),
+                color_upper=np.array([75, 255, 255]),
+                min_area=200,
+                max_area=4000,
+                aspect_ratio_range=(0.6, 1.6),
                 category='enemy'
             ),
             'guide_npc': EntityProfile(
