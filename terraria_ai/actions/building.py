@@ -86,90 +86,119 @@ class BuildingController:
         """
         Build a complete NPC house.
 
-        Args:
-            start_x: X position to start building (bottom-left)
-            start_y: Y position to start building (ground level)
-            blueprint: House blueprint to use
+        This builds a simple box house near the player.
+        Make sure you have:
+        - Slot 4: Building blocks (wood, stone, etc.)
+        - Slot 5: Background walls
+        - Slot 6: Door
+        - Slot 7: Torch
+        - Slot 8: Table/Workbench
+        - Slot 9: Chair
 
         Returns:
             True if house was built successfully
         """
-        if blueprint is None:
-            blueprint = self.blueprint
-
         self.is_building = True
 
-        # Get player position if no start position given
-        if start_x is None or start_y is None:
-            player_x, player_y = self.state.player.position
-            start_x = player_x - (blueprint.width // 2) * self.block_size
-            start_y = player_y + 2 * self.block_size  # Ground level
+        # Get screen center (where player is)
+        frame = self.vision.capture_screen()
+        center_x = frame.shape[1] // 2
+        center_y = frame.shape[0] // 2
 
-        try:
-            # Build floor
-            self._build_floor(start_x, start_y, blueprint.width + 2)
+        # Block spacing (pixels between each block placement)
+        # Terraria blocks are about 16 pixels, but we space out more for reliability
+        spacing = 20
 
-            # Build left wall
-            self._build_wall(start_x, start_y - self.block_size,
-                           blueprint.height + 1, vertical=True)
+        print("Building floor...")
+        self.inventory.select_slot(self.block_slot)
+        time.sleep(0.2)
 
-            # Build right wall
-            self._build_wall(
-                start_x + (blueprint.width + 1) * self.block_size,
-                start_y - self.block_size,
-                blueprint.height + 1,
-                vertical=True
-            )
+        # Build floor (10 blocks wide, below player)
+        floor_y = center_y + 60  # Below player feet
+        for i in range(10):
+            x = center_x - 100 + (i * spacing)
+            self.input.hold_click(x, floor_y, duration=0.15)
+            time.sleep(0.1)
 
-            # Build ceiling
-            self._build_floor(
-                start_x,
-                start_y - (blueprint.height + 1) * self.block_size,
-                blueprint.width + 2
-            )
+        print("Building left wall...")
+        # Build left wall (6 blocks tall)
+        wall_x = center_x - 100
+        for i in range(6):
+            y = floor_y - 20 - (i * spacing)
+            self.input.hold_click(wall_x, y, duration=0.15)
+            time.sleep(0.1)
 
-            # Fill background walls
-            self._fill_background_walls(
-                start_x + self.block_size,
-                start_y - self.block_size,
-                blueprint.width,
-                blueprint.height
-            )
+        print("Building right wall...")
+        # Build right wall (6 blocks tall)
+        wall_x = center_x + 80
+        for i in range(6):
+            y = floor_y - 20 - (i * spacing)
+            self.input.hold_click(wall_x, y, duration=0.15)
+            time.sleep(0.1)
 
-            # Place door
-            if blueprint.has_door:
-                self._place_door(
-                    start_x + (blueprint.width // 2) * self.block_size,
-                    start_y - self.block_size
-                )
+        print("Building ceiling...")
+        # Build ceiling
+        ceiling_y = floor_y - 120
+        for i in range(10):
+            x = center_x - 100 + (i * spacing)
+            self.input.hold_click(x, ceiling_y, duration=0.15)
+            time.sleep(0.1)
 
-            # Place furniture
-            furniture_x = start_x + 3 * self.block_size
-            furniture_y = start_y - self.block_size
+        print("Placing background walls...")
+        # Place background walls (slot 5)
+        self.inventory.select_slot(self.wall_slot)
+        time.sleep(0.2)
 
-            if blueprint.has_table:
-                self._place_table(furniture_x, furniture_y)
+        for row in range(5):
+            for col in range(8):
+                x = center_x - 80 + (col * spacing)
+                y = floor_y - 40 - (row * spacing)
+                self.input.hold_click(x, y, duration=0.1)
+                time.sleep(0.05)
 
-            if blueprint.has_chair:
-                self._place_chair(furniture_x + 2 * self.block_size, furniture_y)
+        print("Placing torch...")
+        # Place torch (slot 7)
+        self.inventory.select_slot(self.torch_slot)
+        time.sleep(0.2)
+        self.input.hold_click(center_x, floor_y - 60, duration=0.2)
+        time.sleep(0.2)
 
-            # Place torch
-            if blueprint.has_light:
-                self._place_torch(
-                    start_x + (blueprint.width // 2) * self.block_size,
-                    start_y - 3 * self.block_size
-                )
+        print("Placing table...")
+        # Place table (slot 8)
+        self.inventory.select_slot(self.furniture_slot)
+        time.sleep(0.2)
+        self.input.hold_click(center_x - 40, floor_y - 30, duration=0.2)
+        time.sleep(0.2)
 
-            self.houses_built += 1
-            self.state.record_house_built()
-            return True
+        print("Placing chair...")
+        # Place chair (slot 9) - cycle to next slot
+        self.inventory.select_slot(9)
+        time.sleep(0.2)
+        self.input.hold_click(center_x + 20, floor_y - 30, duration=0.2)
+        time.sleep(0.2)
 
-        except Exception as e:
-            print(f"Error building house: {e}")
-            return False
+        print("Placing door...")
+        # Place door (slot 6) - need to break wall first
+        self.inventory.select_slot(1)  # Select pickaxe
+        time.sleep(0.2)
+        # Break a hole in the right wall for door
+        door_x = center_x + 80
+        self.input.hold_click(door_x, floor_y - 30, duration=0.5)
+        time.sleep(0.2)
+        self.input.hold_click(door_x, floor_y - 50, duration=0.5)
+        time.sleep(0.2)
+        self.input.hold_click(door_x, floor_y - 70, duration=0.5)
+        time.sleep(0.2)
 
-        finally:
-            self.is_building = False
+        # Place door
+        self.inventory.select_slot(self.door_slot)
+        time.sleep(0.2)
+        self.input.hold_click(door_x, floor_y - 40, duration=0.3)
+
+        self.houses_built += 1
+        self.is_building = False
+        print("House building complete!")
+        return True
 
     def _build_floor(self, start_x: int, y: int, length: int):
         """
