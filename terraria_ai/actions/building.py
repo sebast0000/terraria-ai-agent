@@ -177,23 +177,23 @@ class BuildingController:
             time.sleep(0.15)
 
         print("Placing background walls (pass 1)...")
-        # Place background walls (slot 5) - one block lower to cover floor area
+        # Place background walls (slot 5) - start at floor level
         self.inventory.select_slot(self.wall_slot)
         time.sleep(0.3)
 
-        for row in range(5):
+        for row in range(6):  # Extra row to cover more area
             for col in range(8):
                 x = center_x - 80 + (col * spacing)
-                y = floor_y - 20 - (row * spacing)  # One block lower than before
+                y = floor_y - 5 - (row * spacing)  # Start very close to floor
                 self.input.hold_click(x, y, duration=0.2)
                 time.sleep(0.1)
 
         print("Placing background walls (pass 2)...")
         time.sleep(0.3)
-        for row in range(5):
+        for row in range(6):
             for col in range(8):
                 x = center_x - 80 + (col * spacing)
-                y = floor_y - 20 - (row * spacing)
+                y = floor_y - 5 - (row * spacing)
                 self.input.hold_click(x, y, duration=0.2)
                 time.sleep(0.1)
 
