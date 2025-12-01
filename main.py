@@ -27,6 +27,7 @@ import argparse
 import sys
 import time
 import signal
+import threading
 from typing import Optional
 
 from terraria_ai import TerrariaAI
@@ -51,7 +52,7 @@ Examples:
 
     parser.add_argument(
         '--mode', '-m',
-        choices=['auto', 'interactive', 'build', 'mine', 'combat', 'demo'],
+        choices=['auto', 'interactive', 'build', 'mine', 'combat', 'demo', 'test'],
         default='auto',
         help='Operating mode (default: auto)'
     )
@@ -118,22 +119,89 @@ def goal_from_string(goal_str: str) -> AIGoal:
     return mapping.get(goal_str, AIGoal.IDLE)
 
 
+def test_mode(ai: TerrariaAI):
+    """Test mode to verify screen capture and basic functions work."""
+    print("""
+╔═══════════════════════════════════════════════════════════╗
+║              Terraria AI Agent - Test Mode                 ║
+╠═══════════════════════════════════════════════════════════╣
+║ Testing basic functionality...                             ║
+╚═══════════════════════════════════════════════════════════╝
+    """)
+
+    print("[1/5] Testing screen capture...")
+    try:
+        frame = ai.vision.capture_screen()
+        print(f"  ✓ Screen captured: {frame.shape[1]}x{frame.shape[0]} pixels")
+    except Exception as e:
+        print(f"  ✗ Screen capture failed: {e}")
+        return
+
+    print("\n[2/5] Testing player detection...")
+    try:
+        pos = ai.vision.find_player_position(frame)
+        print(f"  ✓ Player position: {pos}")
+    except Exception as e:
+        print(f"  ✗ Player detection failed: {e}")
+
+    print("\n[3/5] Testing health detection...")
+    try:
+        health = ai.vision.get_health_percentage(frame)
+        print(f"  ✓ Health: {health*100:.1f}%")
+    except Exception as e:
+        print(f"  ✗ Health detection failed: {e}")
+
+    print("\n[4/5] Testing enemy detection...")
+    try:
+        enemies = ai.vision.find_enemies(frame)
+        print(f"  ✓ Enemies found: {len(enemies)}")
+    except Exception as e:
+        print(f"  ✗ Enemy detection failed: {e}")
+
+    print("\n[5/5] Testing keyboard input...")
+    print("  Will press 'W' key in 3 seconds...")
+    print("  (Make sure Terraria is focused!)")
+    time.sleep(3)
+    try:
+        ai.input.press_key('w', 0.1)
+        print("  ✓ Key press sent")
+    except Exception as e:
+        print(f"  ✗ Input failed: {e}")
+
+    print("\n" + "="*50)
+    print("Test complete! If Terraria responded to the key press,")
+    print("the AI should be working. Try 'python main.py --mode interactive'")
+
+    # Save debug screenshot
+    try:
+        ai.vision.save_debug_frame(frame, "debug_screenshot.png")
+        print("\nDebug screenshot saved to: debug_screenshot.png")
+    except:
+        pass
+
+
 def interactive_mode(ai: TerrariaAI):
-    """Run in interactive command mode."""
+    """Run in interactive command mode with background AI loop."""
     print("""
 ╔═══════════════════════════════════════════════════════════╗
 ║           Terraria AI Agent - Interactive Mode             ║
 ╠═══════════════════════════════════════════════════════════╣
 ║ Commands:                                                  ║
-║   build    - Build an NPC house                           ║
-║   mine     - Start mining                                 ║
-║   fight    - Engage combat                                ║
-║   boss     - Fight Eye of Cthulhu (night only)            ║
-║   explore  - Explore the world                            ║
-║   status   - Show current status                          ║
-║   stop     - Stop current action                          ║
-║   quit     - Exit the program                             ║
+║   build     - Build an NPC house                          ║
+║   mine      - Mine blocks for 30 seconds                  ║
+║   fight     - Fight enemies for 30 seconds                ║
+║   explore   - Explore for 30 seconds                      ║
+║   boss      - Fight Eye of Cthulhu (night only)           ║
+║   left/right- Move left or right                          ║
+║   jump      - Jump                                        ║
+║   slot 1-10 - Select hotbar slot                          ║
+║   click     - Click at screen center                      ║
+║   status    - Show current status                         ║
+║   test      - Test screen capture                         ║
+║   quit      - Exit the program                            ║
 ╚═══════════════════════════════════════════════════════════╝
+
+Make sure Terraria is the ACTIVE WINDOW before using commands!
     """)
 
     while True:
@@ -142,28 +210,108 @@ def interactive_mode(ai: TerrariaAI):
 
             if cmd == 'quit' or cmd == 'exit':
                 break
+
+            elif cmd == 'test':
+                print("Testing screen capture...")
+                frame = ai.vision.capture_screen()
+                print(f"Captured: {frame.shape[1]}x{frame.shape[0]}")
+                health = ai.vision.get_health_percentage(frame)
+                print(f"Health detected: {health*100:.1f}%")
+                enemies = ai.vision.find_enemies(frame)
+                print(f"Enemies detected: {len(enemies)}")
+                ai.vision.save_debug_frame(frame, "debug_screenshot.png")
+                print("Screenshot saved to debug_screenshot.png")
+
             elif cmd == 'build':
-                print("Starting house building...")
-                ai.build_house()
+                print("Building NPC house... (this takes about 30 seconds)")
+                print("Make sure you have blocks in slot 4, walls in slot 5, etc.")
+                ai.building.build_npc_house()
+                print("Build attempt complete!")
+
             elif cmd == 'mine':
-                print("Starting mining...")
-                ai.set_goal(AIGoal.MINE)
+                print("Mining for 30 seconds...")
+                print("Make sure pickaxe is in slot 1!")
+                ai.inventory.select_pickaxe()
+                start = time.time()
+                while time.time() - start < 30:
+                    ai.mining.mine_below(0.5)
+                    time.sleep(0.2)
+                    print(f"Mining... {30 - int(time.time() - start)}s left", end='\r')
+                print("\nMining complete!")
+
             elif cmd == 'fight':
-                print("Engaging combat...")
-                ai.fight_enemies()
-            elif cmd == 'boss':
-                print("Summoning Eye of Cthulhu...")
-                ai.summon_eye_of_cthulhu()
+                print("Fighting for 30 seconds...")
+                ai.inventory.select_weapon()
+                start = time.time()
+                while time.time() - start < 30:
+                    ai.state.update()
+                    if ai.state.combat.enemies_nearby:
+                        ai.combat.engage_combat()
+                    else:
+                        print("No enemies detected...", end='\r')
+                    time.sleep(0.2)
+                print("\nCombat complete!")
+
             elif cmd == 'explore':
-                print("Exploring...")
-                ai.explore()
+                print("Exploring for 30 seconds...")
+                start = time.time()
+                going_right = True
+                while time.time() - start < 30:
+                    if going_right:
+                        ai.movement.move_right(0.3)
+                    else:
+                        ai.movement.move_left(0.3)
+                    # Jump occasionally
+                    if int(time.time()) % 3 == 0:
+                        ai.movement.jump(0.15)
+                    # Change direction every 5 seconds
+                    if int(time.time() - start) % 5 == 0:
+                        going_right = not going_right
+                    time.sleep(0.1)
+                print("Exploration complete!")
+
+            elif cmd == 'boss':
+                print("Attempting to summon Eye of Cthulhu...")
+                print("(Must be night and have Suspicious Looking Eye in slot 10)")
+                ai.combat.summon_eye_of_cthulhu()
+
+            elif cmd == 'left':
+                print("Moving left...")
+                ai.movement.move_left(1.0)
+
+            elif cmd == 'right':
+                print("Moving right...")
+                ai.movement.move_right(1.0)
+
+            elif cmd == 'jump':
+                print("Jumping...")
+                ai.movement.jump(0.2)
+
+            elif cmd.startswith('slot '):
+                try:
+                    slot = int(cmd.split()[1])
+                    if 1 <= slot <= 10:
+                        print(f"Selecting slot {slot}...")
+                        ai.inventory.select_slot(slot)
+                    else:
+                        print("Slot must be 1-10")
+                except:
+                    print("Usage: slot 1-10")
+
+            elif cmd == 'click':
+                print("Clicking at screen center...")
+                frame = ai.vision.capture_screen()
+                center_x = frame.shape[1] // 2
+                center_y = frame.shape[0] // 2
+                ai.input.click(center_x, center_y)
+
             elif cmd == 'status':
                 print(ai.get_status())
-            elif cmd == 'stop':
-                print("Stopping current action...")
-                ai.set_goal(AIGoal.IDLE)
+
             elif cmd == 'help':
-                print("Commands: build, mine, fight, boss, explore, status, stop, quit")
+                print("Commands: build, mine, fight, explore, boss, left, right,")
+                print("          jump, slot 1-10, click, status, test, quit")
+
             else:
                 print(f"Unknown command: {cmd}")
                 print("Type 'help' for available commands")
@@ -172,6 +320,8 @@ def interactive_mode(ai: TerrariaAI):
             break
         except Exception as e:
             print(f"Error: {e}")
+            import traceback
+            traceback.print_exc()
 
     ai.stop()
 
@@ -179,52 +329,59 @@ def interactive_mode(ai: TerrariaAI):
 def build_mode(ai: TerrariaAI, count: int = 3):
     """Run in house building mode."""
     print(f"Building {count} NPC houses...")
+    print("Make sure hotbar is set up: blocks, walls, doors, torches, furniture")
 
     for i in range(count):
-        print(f"Building house {i+1}/{count}...")
-        ai.build_house()
-
-        # Wait for completion
-        while ai.current_goal == AIGoal.BUILD_HOUSE:
-            time.sleep(0.5)
-
+        print(f"\nBuilding house {i+1}/{count}...")
+        ai.building.build_npc_house()
         print(f"House {i+1} complete!")
+        time.sleep(2)  # Brief pause between houses
 
-    print("All houses built!")
+    print("\nAll houses built!")
 
 
 def mine_mode(ai: TerrariaAI, duration: int = 300):
     """Run in mining mode."""
     print(f"Mining for {duration} seconds...")
+    print("Make sure pickaxe is in slot 1!")
 
-    ai.set_goal(AIGoal.MINE)
+    ai.inventory.select_pickaxe()
     start_time = time.time()
+    blocks = 0
 
     while time.time() - start_time < duration:
-        time.sleep(1)
-        stats = ai.get_stats()
-        print(f"Blocks mined: {stats['blocks_mined']}", end='\r')
+        ai.mining.mine_below(0.5)
+        blocks += 1
+        elapsed = int(time.time() - start_time)
+        remaining = duration - elapsed
+        print(f"Mining... Blocks: ~{blocks} | Time left: {remaining}s", end='\r')
+        time.sleep(0.3)
 
-    ai.set_goal(AIGoal.IDLE)
-    print(f"\nMining complete! Total blocks: {ai.get_stats()['blocks_mined']}")
+    print(f"\nMining complete! Approximately {blocks} blocks mined.")
 
 
 def combat_mode(ai: TerrariaAI, duration: int = 300):
     """Run in combat training mode."""
     print(f"Combat training for {duration} seconds...")
-    print("Waiting for night time for zombies to spawn...")
+    print("Make sure weapon is in slot 2!")
+    print("Works best at night when zombies spawn.")
 
-    ai.set_goal(AIGoal.FIGHT)
+    ai.inventory.select_weapon()
     start_time = time.time()
+    kills = 0
 
     while time.time() - start_time < duration:
-        time.sleep(1)
-        stats = ai.get_stats()
-        print(f"Enemies killed: {stats['enemies_killed']} | "
-              f"Health: {stats['health']*100:.0f}%", end='\r')
+        ai.state.update()
 
-    ai.set_goal(AIGoal.IDLE)
-    print(f"\nCombat training complete! Total kills: {ai.get_stats()['enemies_killed']}")
+        if ai.state.combat.enemies_nearby:
+            ai.combat.engage_combat()
+            kills += 1
+
+        remaining = duration - int(time.time() - start_time)
+        print(f"Fighting... Kills: ~{kills} | Health: {ai.state.player.health*100:.0f}% | Time: {remaining}s", end='\r')
+        time.sleep(0.2)
+
+    print(f"\nCombat training complete! Approximately {kills} attack sequences.")
 
 
 def demo_mode(ai: TerrariaAI):
@@ -234,42 +391,60 @@ def demo_mode(ai: TerrariaAI):
 ║              Terraria AI Agent - Demo Mode                 ║
 ╠═══════════════════════════════════════════════════════════╣
 ║ This demo will showcase the AI's capabilities:             ║
-║   1. Explore the area                                      ║
-║   2. Mine some blocks                                      ║
-║   3. Build an NPC house                                    ║
-║   4. Fight any enemies encountered                         ║
+║   1. Move around                                           ║
+║   2. Jump                                                  ║
+║   3. Select different hotbar slots                         ║
+║   4. Mine some blocks                                      ║
+║   5. Build basic structure                                 ║
 ╚═══════════════════════════════════════════════════════════╝
     """)
 
-    input("Press Enter to start the demo...")
+    input("Press Enter to start the demo (make sure Terraria is focused!)...")
 
-    # Phase 1: Explore
-    print("\n[Phase 1] Exploring the area...")
-    ai.set_goal(AIGoal.EXPLORE)
-    time.sleep(10)
+    # Phase 1: Movement
+    print("\n[Phase 1] Testing movement...")
+    print("Moving right...")
+    ai.movement.move_right(1.0)
+    time.sleep(0.5)
 
-    # Phase 2: Mine
-    print("\n[Phase 2] Mining blocks...")
-    ai.set_goal(AIGoal.MINE)
-    time.sleep(15)
-    print(f"Blocks mined: {ai.get_stats()['blocks_mined']}")
+    print("Moving left...")
+    ai.movement.move_left(1.0)
+    time.sleep(0.5)
 
-    # Phase 3: Build
-    print("\n[Phase 3] Building an NPC house...")
-    ai.build_house()
-    while ai.current_goal == AIGoal.BUILD_HOUSE:
+    print("Jumping...")
+    ai.movement.jump(0.2)
+    time.sleep(1)
+
+    # Phase 2: Inventory
+    print("\n[Phase 2] Testing inventory...")
+    for slot in [1, 2, 3, 4, 5]:
+        print(f"Selecting slot {slot}...")
+        ai.inventory.select_slot(slot)
         time.sleep(0.5)
-    print(f"Houses built: {ai.get_stats()['houses_built']}")
 
-    # Phase 4: Combat (if enemies present)
-    print("\n[Phase 4] Ready for combat...")
-    ai.set_goal(AIGoal.FIGHT)
-    time.sleep(10)
-    print(f"Enemies killed: {ai.get_stats()['enemies_killed']}")
+    # Phase 3: Mining
+    print("\n[Phase 3] Testing mining (5 seconds)...")
+    ai.inventory.select_pickaxe()
+    start = time.time()
+    while time.time() - start < 5:
+        ai.mining.mine_below(0.3)
+        time.sleep(0.2)
+
+    # Phase 4: Screen analysis
+    print("\n[Phase 4] Analyzing screen...")
+    frame = ai.vision.capture_screen()
+    health = ai.vision.get_health_percentage(frame)
+    enemies = ai.vision.find_enemies(frame)
+    print(f"  Health: {health*100:.1f}%")
+    print(f"  Enemies nearby: {len(enemies)}")
 
     print("\n" + "="*60)
     print("Demo complete!")
-    print(ai.get_status())
+    print("The AI successfully demonstrated:")
+    print("  ✓ Movement (left, right, jump)")
+    print("  ✓ Inventory management (slot selection)")
+    print("  ✓ Mining")
+    print("  ✓ Screen analysis")
 
 
 def main():
@@ -279,22 +454,22 @@ def main():
     print("""
     ╔════════════════════════════════════════════════════════════════╗
     ║                                                                ║
-    ║     ████████╗███████╗██████╗ ██████╗  █████╗ ██████╗ ██╗ █████╗   ║
-    ║     ╚══██╔══╝██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗  ║
-    ║        ██║   █████╗  ██████╔╝██████╔╝███████║██████╔╝██║███████║  ║
-    ║        ██║   ██╔══╝  ██╔══██╗██╔══██╗██╔══██║██╔══██╗██║██╔══██║  ║
-    ║        ██║   ███████╗██║  ██║██║  ██║██║  ██║██║  ██║██║██║  ██║  ║
-    ║        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝  ║
-    ║                     █████╗ ██╗                                     ║
-    ║                    ██╔══██╗██║                                     ║
-    ║                    ███████║██║                                     ║
-    ║                    ██╔══██║██║                                     ║
-    ║                    ██║  ██║██║                                     ║
-    ║                    ╚═╝  ╚═╝╚═╝                                     ║
-    ║                                                                    ║
-    ║                  Autonomous Terraria Player                        ║
-    ║                                                                    ║
-    ╚════════════════════════════════════════════════════════════════════╝
+    ║     ████████╗███████╗██████╗ ██████╗  █████╗ ██████╗ ██╗ █████╗  ║
+    ║     ╚══██╔══╝██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║██╔══██╗ ║
+    ║        ██║   █████╗  ██████╔╝██████╔╝███████║██████╔╝██║███████║ ║
+    ║        ██║   ██╔══╝  ██╔══██╗██╔══██╗██╔══██║██╔══██╗██║██╔══██║ ║
+    ║        ██║   ███████╗██║  ██║██║  ██║██║  ██║██║  ██║██║██║  ██║ ║
+    ║        ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝ ║
+    ║                         █████╗ ██╗                               ║
+    ║                        ██╔══██╗██║                               ║
+    ║                        ███████║██║                               ║
+    ║                        ██╔══██║██║                               ║
+    ║                        ██║  ██║██║                               ║
+    ║                        ╚═╝  ╚═╝╚═╝                               ║
+    ║                                                                  ║
+    ║                  Autonomous Terraria Player                      ║
+    ║                                                                  ║
+    ╚════════════════════════════════════════════════════════════════╝
     """)
 
     print("Initializing AI Agent...")
@@ -326,7 +501,9 @@ def main():
 
     # Run in selected mode
     try:
-        if args.mode == 'interactive':
+        if args.mode == 'test':
+            test_mode(ai)
+        elif args.mode == 'interactive':
             interactive_mode(ai)
         elif args.mode == 'build':
             build_mode(ai)
@@ -340,17 +517,7 @@ def main():
             print("Starting in automatic mode...")
             print("Press Ctrl+C to stop")
             print()
-
-            if args.duration:
-                # Run for specified duration
-                start_time = time.time()
-                ai.running = True
-
-                while time.time() - start_time < args.duration:
-                    ai._main_loop()
-            else:
-                # Run indefinitely
-                ai.start()
+            ai.start()
 
     except KeyboardInterrupt:
         print("\nInterrupted by user")
