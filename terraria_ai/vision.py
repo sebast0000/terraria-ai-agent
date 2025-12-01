@@ -56,7 +56,7 @@ class Vision:
                 'upper': np.array([20, 100, 120])
             },
             'green_slime': {
-                'lower': np.array([35, 80, 80]),
+                'lower': np.array([45, 150, 100]),  # Bright lime green only (not dark tree green)
                 'upper': np.array([75, 255, 255])
             },
             'blue_slime': {
@@ -208,6 +208,7 @@ class Vision:
                     ))
 
         # Detect green slimes (bright green blob shapes)
+        # NOTE: We filter out trees (tall shapes) and torches (small bright spots)
         green_slime_mask = cv2.inRange(hsv,
                                        self.color_ranges['green_slime']['lower'],
                                        self.color_ranges['green_slime']['upper'])
@@ -216,18 +217,26 @@ class Vision:
 
         for contour in green_slime_contours:
             area = cv2.contourArea(contour)
-            if 200 < area < 4000:  # Green slimes are small-medium
+            if 300 < area < 3500:  # Green slimes are small-medium (not huge like trees)
                 x, y, w, h = cv2.boundingRect(contour)
                 aspect_ratio = h / w if w > 0 else 0
 
-                # Slimes are roughly blob-shaped (not too tall or wide)
-                if 0.5 < aspect_ratio < 1.8:
-                    enemies.append(DetectedObject(
-                        name='green_slime',
-                        x=x, y=y, width=w, height=h,
-                        confidence=min(area / 2000, 1.0),
-                        category='enemy'
-                    ))
+                # Slimes are blob-shaped (not tall like trees)
+                # Trees are usually aspect_ratio > 2 (tall and narrow)
+                if 0.5 < aspect_ratio < 1.5:
+                    # Check circularity - slimes are roundish, trees are not
+                    perimeter = cv2.arcLength(contour, True)
+                    circularity = 4 * np.pi * area / (perimeter ** 2) if perimeter > 0 else 0
+
+                    # Slimes should be somewhat circular (> 0.3)
+                    # Trees and irregular shapes will have low circularity
+                    if circularity > 0.3:
+                        enemies.append(DetectedObject(
+                            name='green_slime',
+                            x=x, y=y, width=w, height=h,
+                            confidence=min(area / 2000, 1.0),
+                            category='enemy'
+                        ))
 
         # Detect blue slimes (cyan/blue blob shapes)
         blue_slime_mask = cv2.inRange(hsv,
