@@ -114,7 +114,15 @@ class BuildingController:
         time.sleep(0.2)
 
         # Build floor (10 blocks wide, at player feet level - not underground)
+        # Do two passes to ensure all blocks are placed
         floor_y = center_y + 35  # At player feet, not below ground
+        for i in range(10):
+            x = center_x - 100 + (i * spacing)
+            self.input.hold_click(x, floor_y, duration=0.15)
+            time.sleep(0.1)
+
+        print("Double-checking floor...")
+        time.sleep(0.2)
         for i in range(10):
             x = center_x - 100 + (i * spacing)
             self.input.hold_click(x, floor_y, duration=0.15)
@@ -145,14 +153,14 @@ class BuildingController:
             time.sleep(0.1)
 
         print("Placing background walls...")
-        # Place background walls (slot 5)
+        # Place background walls (slot 5) - one block lower to cover floor area
         self.inventory.select_slot(self.wall_slot)
         time.sleep(0.2)
 
         for row in range(5):
             for col in range(8):
                 x = center_x - 80 + (col * spacing)
-                y = floor_y - 40 - (row * spacing)
+                y = floor_y - 20 - (row * spacing)  # One block lower than before
                 self.input.hold_click(x, y, duration=0.1)
                 time.sleep(0.05)
 
