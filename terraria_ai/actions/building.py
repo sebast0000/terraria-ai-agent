@@ -113,8 +113,8 @@ class BuildingController:
         self.inventory.select_slot(self.block_slot)
         time.sleep(0.2)
 
-        # Build floor (10 blocks wide, below player)
-        floor_y = center_y + 60  # Below player feet
+        # Build floor (10 blocks wide, at player feet level - not underground)
+        floor_y = center_y + 35  # At player feet, not below ground
         for i in range(10):
             x = center_x - 100 + (i * spacing)
             self.input.hold_click(x, floor_y, duration=0.15)
@@ -157,43 +157,43 @@ class BuildingController:
                 time.sleep(0.05)
 
         print("Placing torch...")
-        # Place torch (slot 7)
+        # Place torch (slot 7) - on wall, middle height of house
         self.inventory.select_slot(self.torch_slot)
         time.sleep(0.2)
-        self.input.hold_click(center_x, floor_y - 60, duration=0.2)
+        self.input.hold_click(center_x, floor_y - 70, duration=0.2)
         time.sleep(0.2)
 
         print("Placing table...")
-        # Place table (slot 8)
+        # Place table (slot 8) - on the floor inside the house
         self.inventory.select_slot(self.furniture_slot)
         time.sleep(0.2)
-        self.input.hold_click(center_x - 40, floor_y - 30, duration=0.2)
+        self.input.hold_click(center_x - 40, floor_y - 25, duration=0.2)
         time.sleep(0.2)
 
         print("Placing chair...")
-        # Place chair (slot 9) - cycle to next slot
+        # Place chair (slot 9) - on the floor inside the house
         self.inventory.select_slot(9)
         time.sleep(0.2)
-        self.input.hold_click(center_x + 20, floor_y - 30, duration=0.2)
+        self.input.hold_click(center_x + 20, floor_y - 25, duration=0.2)
         time.sleep(0.2)
 
         print("Placing door...")
-        # Place door (slot 6) - need to break wall first
+        # Place door (slot 6) - need to break wall blocks first
         self.inventory.select_slot(1)  # Select pickaxe
         time.sleep(0.2)
-        # Break a hole in the right wall for door
+        # Break 3 blocks in the right wall for door space (from bottom up)
         door_x = center_x + 80
-        self.input.hold_click(door_x, floor_y - 30, duration=0.5)
+        self.input.hold_click(door_x, floor_y - 25, duration=0.5)
         time.sleep(0.2)
-        self.input.hold_click(door_x, floor_y - 50, duration=0.5)
+        self.input.hold_click(door_x, floor_y - 45, duration=0.5)
         time.sleep(0.2)
-        self.input.hold_click(door_x, floor_y - 70, duration=0.5)
+        self.input.hold_click(door_x, floor_y - 65, duration=0.5)
         time.sleep(0.2)
 
-        # Place door
+        # Place door at the bottom of the opening
         self.inventory.select_slot(self.door_slot)
         time.sleep(0.2)
-        self.input.hold_click(door_x, floor_y - 40, duration=0.3)
+        self.input.hold_click(door_x, floor_y - 25, duration=0.3)
 
         self.houses_built += 1
         self.is_building = False
