@@ -180,6 +180,15 @@ def test_mode(ai: TerrariaAI):
         pass
 
 
+def countdown(seconds: int = 2):
+    """Display a countdown before executing an action."""
+    print(f"Starting in {seconds}... (switch to Terraria now!)")
+    for i in range(seconds, 0, -1):
+        print(f"  {i}...")
+        time.sleep(1)
+    print("  Go!")
+
+
 def interactive_mode(ai: TerrariaAI):
     """Run in interactive command mode with background AI loop."""
     print("""
@@ -201,7 +210,7 @@ def interactive_mode(ai: TerrariaAI):
 ║   quit      - Exit the program                            ║
 ╚═══════════════════════════════════════════════════════════╝
 
-Make sure Terraria is the ACTIVE WINDOW before using commands!
+You have 2 seconds to switch to Terraria after each command!
     """)
 
     while True:
@@ -213,6 +222,7 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
 
             elif cmd == 'test':
                 print("Testing screen capture...")
+                countdown(2)
                 frame = ai.vision.capture_screen()
                 print(f"Captured: {frame.shape[1]}x{frame.shape[0]}")
                 health = ai.vision.get_health_percentage(frame)
@@ -225,12 +235,14 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
             elif cmd == 'build':
                 print("Building NPC house... (this takes about 30 seconds)")
                 print("Make sure you have blocks in slot 4, walls in slot 5, etc.")
+                countdown(2)
                 ai.building.build_npc_house()
                 print("Build attempt complete!")
 
             elif cmd == 'mine':
                 print("Mining for 30 seconds...")
                 print("Make sure pickaxe is in slot 1!")
+                countdown(2)
                 ai.inventory.select_pickaxe()
                 start = time.time()
                 while time.time() - start < 30:
@@ -241,6 +253,7 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
 
             elif cmd == 'fight':
                 print("Fighting for 30 seconds...")
+                countdown(2)
                 ai.inventory.select_weapon()
                 start = time.time()
                 while time.time() - start < 30:
@@ -254,6 +267,7 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
 
             elif cmd == 'explore':
                 print("Exploring for 30 seconds...")
+                countdown(2)
                 start = time.time()
                 going_right = True
                 while time.time() - start < 30:
@@ -273,17 +287,21 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
             elif cmd == 'boss':
                 print("Attempting to summon Eye of Cthulhu...")
                 print("(Must be night and have Suspicious Looking Eye in slot 10)")
+                countdown(2)
                 ai.combat.summon_eye_of_cthulhu()
 
             elif cmd == 'left':
+                countdown(2)
                 print("Moving left...")
                 ai.movement.move_left(1.0)
 
             elif cmd == 'right':
+                countdown(2)
                 print("Moving right...")
                 ai.movement.move_right(1.0)
 
             elif cmd == 'jump':
+                countdown(2)
                 print("Jumping...")
                 ai.movement.jump(0.2)
 
@@ -291,6 +309,7 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
                 try:
                     slot = int(cmd.split()[1])
                     if 1 <= slot <= 10:
+                        countdown(2)
                         print(f"Selecting slot {slot}...")
                         ai.inventory.select_slot(slot)
                     else:
@@ -299,6 +318,7 @@ Make sure Terraria is the ACTIVE WINDOW before using commands!
                     print("Usage: slot 1-10")
 
             elif cmd == 'click':
+                countdown(2)
                 print("Clicking at screen center...")
                 frame = ai.vision.capture_screen()
                 center_x = frame.shape[1] // 2
